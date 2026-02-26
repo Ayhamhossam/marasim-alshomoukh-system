@@ -92,6 +92,8 @@ def purchases():
         else:
             conn.execute("INSERT INTO products (name,type,purchase_price,qty) VALUES (?,?,?,?)", (name,type_,price,qty))
         conn.commit()
+        conn.close()
+        return redirect(url_for("dashboard"))  # بعد POST ارجع للداشبورد
     products = conn.execute("SELECT * FROM products").fetchall()
     conn.close()
     return render_template("purchases.html", products=products)
@@ -112,6 +114,8 @@ def sales():
             conn.execute("INSERT INTO sales (product_id, qty, sale_price, date) VALUES (?,?,?,?)",
                          (product_id, qty, sale_price, date))
             conn.commit()
+        conn.close()
+        return redirect(url_for("dashboard"))  # بعد البيع ارجع للداشبورد
     products = conn.execute("SELECT id,name,qty FROM products").fetchall()
     sales_data = conn.execute("""
         SELECT s.qty, s.sale_price, s.date, p.name
@@ -139,6 +143,8 @@ def returns():
             conn.execute("INSERT INTO returns (product_id, qty, type, date) VALUES (?,?,?,?)",
                          (product_id, qty, type_, date))
             conn.commit()
+        conn.close()
+        return redirect(url_for("dashboard"))  # بعد المرتجع ارجع للداشبورد
     products = conn.execute("SELECT id,name,qty FROM products").fetchall()
     conn.close()
     return render_template("returns.html", products=products)
