@@ -1,0 +1,7 @@
+<h2>المخزون</h2>
+<ul>
+{% for p in products %}
+<li>{{p[1]}} - {{p[4]}} وحدة متبقية - سعر الشراء {{p[3]}}</li>
+{% endfor %}
+</ul>
+<a href="/dashboard">رجوع</a>
