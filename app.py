@@ -1,252 +1,129 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from datetime import datetime
 
-app = Flask(__name__, template_folder="templates")
-app.secret_key = "marasim_secret_key"
+app = Flask(__name__)
+DB = "store.db"  # قاعدة البيانات الدائمة
 
-USERNAME = "ali"
-PASSWORD = "776940187"
-
-DB = "store.db"
-
-# =========================
-# إنشاء قاعدة البيانات
-# =========================
-def init_db():
+# --- اتصال بقاعدة البيانات ---
+def get_db_connection():
     conn = sqlite3.connect(DB)
-    c = conn.cursor()
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            type TEXT,
-            purchase_price REAL,
-            quantity INTEGER
-        )
-    """)
-
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id INTEGER,
-            quantity_sold INTEGER,
-            sale_price REAL,
-            date TEXT
-        )
-    """)
-
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS returns (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id INTEGER,
-            quantity INTEGER,
-            reason TEXT,
-            date TEXT
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# =========================
-# تسجيل الدخول
-# =========================
+# --- صفحة تسجيل الدخول ---
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if request.form["username"] == USERNAME and request.form["password"] == PASSWORD:
-            session["user"] = USERNAME
-            return redirect("/dashboard")
-        else:
-            return "بيانات الدخول خاطئة"
+        username = request.form["username"]
+        password = request.form["password"]
+        if username == "ali" and password == "776940187":
+            return redirect(url_for("dashboard"))
     return render_template("login.html")
 
-
-# =========================
-# لوحة التحكم
-# =========================
+# --- Dashboard ---
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
-    total_products = c.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-    total_stock = c.execute("SELECT IFNULL(SUM(quantity),0) FROM products").fetchone()[0]
-    total_sales = c.execute("SELECT IFNULL(SUM(quantity_sold * sale_price),0) FROM sales").fetchone()[0]
-
+    conn = get_db_connection()
+    total_products = conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+    total_stock = conn.execute("SELECT SUM(qty) FROM products").fetchone()[0] or 0
+    total_sales = conn.execute("SELECT SUM(qty*sale_price) FROM sales").fetchone()[0] or 0
+    total_purchase_cost = conn.execute("SELECT SUM(qty*purchase_price) FROM products").fetchone()[0] or 0
+    net_profit = total_sales - total_purchase_cost
+    total_returns_store = conn.execute("SELECT SUM(qty) FROM returns WHERE type='للمحل'").fetchone()[0] or 0
+    total_returns_supplier = conn.execute("SELECT SUM(qty) FROM returns WHERE type='للتاجر'").fetchone()[0] or 0
     conn.close()
+    return render_template("dashboard.html", total_products=total_products, total_stock=total_stock,
+                           total_sales=total_sales, net_profit=net_profit,
+                           total_returns_store=total_returns_store, total_returns_supplier=total_returns_supplier)
 
-    return render_template(
-        "dashboard.html",
-        total_products=total_products,
-        total_stock=total_stock,
-        total_sales=total_sales
-    )
-
-
-# =========================
-# تسجيل خروج
-# =========================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
-
-# =========================
-# المشتريات
-# =========================
+# --- المشتريات ---
 @app.route("/purchases", methods=["GET", "POST"])
 def purchases():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
+    conn = get_db_connection()
     if request.method == "POST":
         name = request.form["name"]
         type_ = request.form["type"]
         price = float(request.form["price"])
         qty = int(request.form["qty"])
 
-        existing = c.execute(
-            "SELECT id, quantity FROM products WHERE name=?",
-            (name,)
-        ).fetchone()
-
+        existing = conn.execute("SELECT id, qty FROM products WHERE name=?", (name,)).fetchone()
         if existing:
-            new_qty = existing[1] + qty
-            c.execute(
-                "UPDATE products SET quantity=?, purchase_price=? WHERE id=?",
-                (new_qty, price, existing[0])
-            )
+            # تحديث الكمية إذا المنتج موجود
+            new_qty = existing["qty"] + qty
+            conn.execute("UPDATE products SET qty=?, purchase_price=? WHERE id=?", (new_qty, price, existing["id"]))
         else:
-            c.execute(
-                "INSERT INTO products (name, type, purchase_price, quantity) VALUES (?, ?, ?, ?)",
-                (name, type_, price, qty)
-            )
-
+            conn.execute("INSERT INTO products (name,type,purchase_price,qty) VALUES (?,?,?,?)", (name,type_,price,qty))
         conn.commit()
-        conn.close()
-        return redirect("/purchases")
 
-    products = c.execute("SELECT * FROM products").fetchall()
+    products = conn.execute("SELECT * FROM products").fetchall()
     conn.close()
-
     return render_template("purchases.html", products=products)
 
-
-# =========================
-# المبيعات
-# =========================
+# --- المبيعات ---
 @app.route("/sales", methods=["GET", "POST"])
 def sales():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
-    products = c.execute("SELECT * FROM products").fetchall()
-
+    conn = get_db_connection()
     if request.method == "POST":
-        product_id = int(request.form["product"])
+        product_id = int(request.form["product_id"])
         qty = int(request.form["qty"])
-        price = float(request.form["sale_price"])
+        sale_price = float(request.form["sale_price"])
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        current_qty = c.execute(
-            "SELECT quantity FROM products WHERE id=?",
-            (product_id,)
-        ).fetchone()[0]
-
-        if qty > current_qty:
-            conn.close()
-            return "الكمية غير متوفرة"
-
-        c.execute(
-            "UPDATE products SET quantity = quantity - ? WHERE id=?",
-            (qty, product_id)
-        )
-
-        c.execute(
-            "INSERT INTO sales (product_id, quantity_sold, sale_price, date) VALUES (?, ?, ?, ?)",
-            (product_id, qty, price, datetime.now())
-        )
-
-        conn.commit()
-        conn.close()
-        return redirect("/sales")
-
+        # التأكد من وجود كمية كافية
+        product = conn.execute("SELECT qty FROM products WHERE id=?", (product_id,)).fetchone()
+        if product and product["qty"] >= qty:
+            new_qty = product["qty"] - qty
+            conn.execute("UPDATE products SET qty=? WHERE id=?", (new_qty, product_id))
+            conn.execute("INSERT INTO sales (product_id, qty, sale_price, date) VALUES (?,?,?,?)",
+                         (product_id, qty, sale_price, date))
+            conn.commit()
+    products = conn.execute("SELECT id,name,qty FROM products").fetchall()
+    sales_data = conn.execute("""
+        SELECT s.qty, s.sale_price, s.date, p.name
+        FROM sales s
+        JOIN products p ON s.product_id=p.id
+        ORDER BY s.date DESC
+    """).fetchall()
     conn.close()
-    return render_template("sales.html", products=products)
+    return render_template("sales.html", products=products,
+                           sales=[{"qty":s["qty"], "sale_price":s["sale_price"], "date":s["date"], "product_name":s["name"]} for s in sales_data])
 
-
-# =========================
-# المرتجعات
-# =========================
-@app.route("/returns", methods=["GET", "POST"])
-def returns_page():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
-    products = c.execute("SELECT * FROM products").fetchall()
-
+# --- المرتجعات ---
+@app.route("/returns", methods=["GET","POST"])
+def returns():
+    conn = get_db_connection()
     if request.method == "POST":
-        product_id = int(request.form["product"])
+        product_id = int(request.form["product_id"])
         qty = int(request.form["qty"])
-        reason = request.form["reason"]
+        type_ = request.form["type"]
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if reason == "مرتجع زبون":
-            c.execute(
-                "UPDATE products SET quantity = quantity + ? WHERE id=?",
-                (qty, product_id)
-            )
-        elif reason == "مرتجع تاجر":
-            c.execute(
-                "UPDATE products SET quantity = quantity - ? WHERE id=?",
-                (qty, product_id)
-            )
+        # تحديث المخزون حسب نوع المرتجع
+        product = conn.execute("SELECT qty FROM products WHERE id=?", (product_id,)).fetchone()
+        if product:
+            new_qty = product["qty"] + qty if type_=="للمحل" else max(0, product["qty"] - qty)
+            conn.execute("UPDATE products SET qty=? WHERE id=?", (new_qty, product_id))
+            conn.execute("INSERT INTO returns (product_id, qty, type, date) VALUES (?,?,?,?)",
+                         (product_id, qty, type_, date))
+            conn.commit()
 
-        c.execute(
-            "INSERT INTO returns (product_id, quantity, reason, date) VALUES (?, ?, ?, ?)",
-            (product_id, qty, reason, datetime.now())
-        )
-
-        conn.commit()
-        conn.close()
-        return redirect("/returns")
-
+    products = conn.execute("SELECT id,name,qty FROM products").fetchall()
     conn.close()
     return render_template("returns.html", products=products)
 
-
-# =========================
-# المخزون
-# =========================
+# --- المخزون ---
 @app.route("/inventory")
 def inventory():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-
-    products = c.execute("SELECT * FROM products").fetchall()
+    conn = get_db_connection()
+    products = conn.execute("SELECT * FROM products").fetchall()
     conn.close()
-
     return render_template("inventory.html", products=products)
 
+# --- تسجيل الخروج ---
+@app.route("/logout")
+def logout():
+    return redirect(url_for("login"))
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
