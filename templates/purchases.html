@@ -1,17 +1,41 @@
-<h2>المشتريات</h2>
-<form method="post">
-اسم المنتج: <input name="name"><br>
-النوع: <input name="type"><br>
-سعر الشراء: <input name="price"><br>
-الكمية: <input name="qty"><br>
-<button>إضافة/تحديث</button>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>المشتريات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 text-white p-8">
+
+<h1 class="text-3xl font-bold text-cyan-400 mb-8">المشتريات</h1>
+
+<div class="bg-slate-800 p-6 rounded-2xl shadow-xl max-w-xl">
+
+<form method="post" class="space-y-4">
+
+    <input name="name" placeholder="اسم المنتج"
+        class="w-full p-3 rounded-lg bg-slate-700 border-none">
+
+    <input name="type" placeholder="النوع"
+        class="w-full p-3 rounded-lg bg-slate-700">
+
+    <input name="price" placeholder="سعر الشراء"
+        class="w-full p-3 rounded-lg bg-slate-700">
+
+    <input name="qty" placeholder="الكمية"
+        class="w-full p-3 rounded-lg bg-slate-700">
+
+    <button class="w-full bg-green-600 hover:bg-green-700 p-3 rounded-lg font-bold transition">
+        إضافة المنتج
+    </button>
+
 </form>
 
-<h3>المنتجات الحالية</h3>
-<ul>
-{% for p in products %}
-<li>{{p[1]}} - {{p[4]}} وحدة - سعر شراء {{p[3]}}</li>
-{% endfor %}
-</ul>
+</div>
 
-<a href="/dashboard">رجوع</a>
+<a href="/dashboard" class="inline-block mt-8 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg">
+    رجوع
+</a>
+
+</body>
+</html>
