@@ -1,9 +1,48 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
+import os
 from datetime import datetime
 
 app = Flask(__name__)
-DB = "store.db"  # قاعدة البيانات الدائمة
+DB = "store.db"
+
+# --- إنشاء القاعدة والجداول إذا لم تكن موجودة ---
+def init_db():
+    if not os.path.exists(DB):
+        conn = sqlite3.connect(DB)
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                type TEXT,
+                purchase_price REAL,
+                qty INTEGER
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS sales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER,
+                qty INTEGER,
+                sale_price REAL,
+                date TEXT
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS returns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER,
+                qty INTEGER,
+                type TEXT,
+                date TEXT
+            )
+        """)
+        conn.commit()
+        conn.close()
+        print("✅ قاعدة البيانات store.db أنشئت بنجاح")
+    else:
+        print("قاعدة البيانات موجودة بالفعل:", os.path.abspath(DB))
 
 # --- اتصال بقاعدة البيانات ---
 def get_db_connection():
@@ -11,7 +50,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- صفحة تسجيل الدخول ---
+# --- تسجيل الدخول ---
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -46,16 +85,13 @@ def purchases():
         type_ = request.form["type"]
         price = float(request.form["price"])
         qty = int(request.form["qty"])
-
         existing = conn.execute("SELECT id, qty FROM products WHERE name=?", (name,)).fetchone()
         if existing:
-            # تحديث الكمية إذا المنتج موجود
             new_qty = existing["qty"] + qty
             conn.execute("UPDATE products SET qty=?, purchase_price=? WHERE id=?", (new_qty, price, existing["id"]))
         else:
             conn.execute("INSERT INTO products (name,type,purchase_price,qty) VALUES (?,?,?,?)", (name,type_,price,qty))
         conn.commit()
-
     products = conn.execute("SELECT * FROM products").fetchall()
     conn.close()
     return render_template("purchases.html", products=products)
@@ -69,8 +105,6 @@ def sales():
         qty = int(request.form["qty"])
         sale_price = float(request.form["sale_price"])
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # التأكد من وجود كمية كافية
         product = conn.execute("SELECT qty FROM products WHERE id=?", (product_id,)).fetchone()
         if product and product["qty"] >= qty:
             new_qty = product["qty"] - qty
@@ -98,8 +132,6 @@ def returns():
         qty = int(request.form["qty"])
         type_ = request.form["type"]
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # تحديث المخزون حسب نوع المرتجع
         product = conn.execute("SELECT qty FROM products WHERE id=?", (product_id,)).fetchone()
         if product:
             new_qty = product["qty"] + qty if type_=="للمحل" else max(0, product["qty"] - qty)
@@ -107,7 +139,6 @@ def returns():
             conn.execute("INSERT INTO returns (product_id, qty, type, date) VALUES (?,?,?,?)",
                          (product_id, qty, type_, date))
             conn.commit()
-
     products = conn.execute("SELECT id,name,qty FROM products").fetchall()
     conn.close()
     return render_template("returns.html", products=products)
@@ -126,4 +157,5 @@ def logout():
     return redirect(url_for("login"))
 
 if __name__ == "__main__":
+    init_db()  # إنشاء القاعدة إذا لم تكن موجودة
     app.run(debug=True)
