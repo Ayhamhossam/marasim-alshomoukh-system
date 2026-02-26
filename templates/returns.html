@@ -1,0 +1,17 @@
+<h2>المرتجعات</h2>
+<form method="post">
+المنتج: 
+<select name="product">
+{% for p in products %}
+<option value="{{p[0]}}">{{p[1]}} ({{p[4]}} وحدة)</option>
+{% endfor %}
+</select><br>
+الكمية: <input name="qty"><br>
+نوع المرتجع:
+<select name="reason">
+<option>مرتجع زبون</option>
+<option>مرتجع تاجر</option>
+</select><br>
+<button>تسجيل المرتجع</button>
+</form>
+<a href="/dashboard">رجوع</a>
