@@ -1,0 +1,13 @@
+<h2>المبيعات</h2>
+<form method="post">
+المنتج: 
+<select name="product">
+{% for p in products %}
+<option value="{{p[0]}}">{{p[1]}} ({{p[4]}} وحدة)</option>
+{% endfor %}
+</select><br>
+الكمية: <input name="qty"><br>
+سعر البيع: <input name="sale_price"><br>
+<button>بيع</button>
+</form>
+<a href="/dashboard">رجوع</a>
