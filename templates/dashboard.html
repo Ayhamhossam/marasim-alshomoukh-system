@@ -1,39 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>لوحة التحكم - مراسيم الشموخ</title>
-<style>
-body{
-background:#F5F5DC;
-font-family:Arial;
-text-align:center;
-}
-.box{
-background:#87CEEB;
-margin:50px auto;
-padding:20px;
-width:90%;
-border-radius:15px;
-}
-a{
-display:block;
-background:white;
-margin:10px;
-padding:12px;
-border-radius:10px;
-text-decoration:none;
-color:black;
-}
-</style>
+    <title>مراسيم الشموخ - لوحة التحكم</title>
 </head>
 <body>
-<div class="box">
-<h2>🏪 مراسيم الشموخ</h2>
-<a href="#">المشتريات</a>
-<a href="#">المبيعات</a>
-<a href="#">المرتجعات</a>
-<a href="#">المخزون</a>
+
+<h1>مراسيم الشموخ</h1>
+
+<h3>إحصائيات عامة</h3>
+<p>عدد المنتجات: {{ total_products }}</p>
+<p>إجمالي المخزون: {{ total_stock }}</p>
+<p>إجمالي المبيعات: {{ total_sales }}</p>
+
+<hr>
+
+<h3>الأقسام</h3>
+
+<a href="/purchases">المشتريات</a><br><br>
+<a href="/sales">المبيعات</a><br><br>
+<a href="/returns">المرتجعات</a><br><br>
+<a href="/inventory">المخزون</a><br><br>
 <a href="/logout">تسجيل خروج</a>
-</div>
+
 </body>
 </html>
