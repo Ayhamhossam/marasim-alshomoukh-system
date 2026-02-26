@@ -1,26 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>مراسيم الشموخ - لوحة التحكم</title>
+    <title>مراسيم الشموخ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h1>مراسيم الشموخ</h1>
+<body class="bg-slate-900 text-white">
 
-<h3>إحصائيات عامة</h3>
-<p>عدد المنتجات: {{ total_products }}</p>
-<p>إجمالي المخزون: {{ total_stock }}</p>
-<p>إجمالي المبيعات: {{ total_sales }}</p>
+<div class="min-h-screen p-8">
 
-<hr>
+    <h1 class="text-4xl font-bold text-center mb-10 text-cyan-400">
+        مراسيم الشموخ
+    </h1>
 
-<h3>الأقسام</h3>
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
 
-<a href="/purchases">المشتريات</a><br><br>
-<a href="/sales">المبيعات</a><br><br>
-<a href="/returns">المرتجعات</a><br><br>
-<a href="/inventory">المخزون</a><br><br>
-<a href="/logout">تسجيل خروج</a>
+        <div class="bg-gradient-to-r from-blue-500 to-cyan-400 p-6 rounded-2xl shadow-xl">
+            <h2 class="text-xl font-semibold">عدد المنتجات</h2>
+            <p class="text-3xl mt-4">{{ total_products }}</p>
+        </div>
+
+        <div class="bg-gradient-to-r from-green-500 to-emerald-400 p-6 rounded-2xl shadow-xl">
+            <h2 class="text-xl font-semibold">إجمالي المخزون</h2>
+            <p class="text-3xl mt-4">{{ total_stock }}</p>
+        </div>
+
+        <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-6 rounded-2xl shadow-xl">
+            <h2 class="text-xl font-semibold">إجمالي المبيعات</h2>
+            <p class="text-3xl mt-4">{{ total_sales }}</p>
+        </div>
+
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+
+        <a href="/purchases" class="bg-blue-600 hover:bg-blue-700 p-4 rounded-xl text-center shadow-lg transition">
+            المشتريات
+        </a>
+
+        <a href="/sales" class="bg-green-600 hover:bg-green-700 p-4 rounded-xl text-center shadow-lg transition">
+            المبيعات
+        </a>
+
+        <a href="/returns" class="bg-yellow-500 hover:bg-yellow-600 p-4 rounded-xl text-center shadow-lg transition">
+            المرتجعات
+        </a>
+
+        <a href="/inventory" class="bg-purple-600 hover:bg-purple-700 p-4 rounded-xl text-center shadow-lg transition">
+            المخزون
+        </a>
+
+    </div>
+
+</div>
 
 </body>
 </html>
