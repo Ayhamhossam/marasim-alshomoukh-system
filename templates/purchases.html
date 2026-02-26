@@ -1,0 +1,17 @@
+<h2>المشتريات</h2>
+<form method="post">
+اسم المنتج: <input name="name"><br>
+النوع: <input name="type"><br>
+سعر الشراء: <input name="price"><br>
+الكمية: <input name="qty"><br>
+<button>إضافة/تحديث</button>
+</form>
+
+<h3>المنتجات الحالية</h3>
+<ul>
+{% for p in products %}
+<li>{{p[1]}} - {{p[4]}} وحدة - سعر شراء {{p[3]}}</li>
+{% endfor %}
+</ul>
+
+<a href="/dashboard">رجوع</a>
